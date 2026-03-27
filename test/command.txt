@@ -1,0 +1,6 @@
+python Predict_and_extract/main.py --model_path /media/DOLPHIN/Analyses_alexis/other_stuff/MODELS/NASA_top_secret_extremely_effective_whistle_detector/2025-02-24_12-05_model_class_weight_3_vs_1_model_2_epoch_07_0.0243.h5 --recordings /media/DOLPHIN1/2024 --saving_folder test/ --specific_files test/test_recordings.txt --CLF 3 --CHF 20 --image_norm
+
+
+new model:
+
+python Predict_and_extract/main_new.py --model_path /media/jz_work_ioc/DNN_training/models/model_vgg_best.h5 --recordings /media/DOLPHIN2/Recordings/2022 --saving_folder test/new_model/ --specific_files test/test_recordings.txt --save_p --batch_size 16 --max_workers 2

@@ -1,0 +1,6 @@
+python main.py --model_path /media/DOLPHIN/Analyses_alexis/other_stuff/MODELS/NASA_top_secret_extremely_effective_whistle_detector/2025-02-24_12-05_model_class_weight_3_vs_1_model_2_epoch_07_0.0243.h5 --root /media/DOLPHIN1/new_wav2vec2_dataset/extracted_segments/2022Exp_17_Oct_2022_1045_channel_0.wav --batch_size 32
+
+conda environment : test_env
+python Predict_and_extract/main.py --model_path /users/zfne/mustun/Documents/GitHub/Dolphins/AutomaticExtraction/models/2025-02-24_12-05_model_class_weight_3_vs_1_model_2_epoch_07_0.0243.h5 --root /media/DOLPHIN2/Recordings --recordings /media/DOLPHIN2/Recordings --saving_folder /media/DOLPHIN1/new_detection_dataset/alexis_extractor_end_2021 --image_norm --threshold 0.9 --batch_size 16 --max_worker 2
+
+python Predict_and_extract/main.py --model_path /users/zfne/mustun/Documents/GitHub/Dolphins/AutomaticExtraction/models/2025-02-24_12-05_model_class_weight_3_vs_1_model_2_epoch_07_0.0243.h5 --root /media/DOLPHIN1/2024 --recordings /media/DOLPHIN1/2024 --saving_folder /media/DOLPHIN1/new_detection_dataset/alexis_extractor_2024 --specific_files test/End_2024.txt --image_norm --threshold 0.7 --batch_size 16 --max_worker 2

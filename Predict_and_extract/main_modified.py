@@ -68,8 +68,9 @@ def load_config(config_path):
             # Fall through to use default config
 
     # Configuration file doesn't exist or had an error - use default values
-    default_recordings_folder = "recordings_default"  # Define your default path
-    default_saving_folder = "saving_folder_default"    # Define your default path
+    # test
+    default_recordings_folder = "/media/DOLPHIN1/new_wav2vec2_dataset/extracted_segments/2022Exp_17_Oct_2022_1045_channel_0.wav"  # Define your default path
+    default_saving_folder = "/users/zfne/mustun/Documents/GitHub/DolphinWhistleExtractor/results"    # Define your default path
 
     config = {"recordings": default_recordings_folder, "saving_folder": default_saving_folder}
 
@@ -91,7 +92,7 @@ def main():
     # Default parameters
     default_model_path = "DNN_whistle_detection/models/model_vgg.h5"
     default_root = "/media/DOLPHIN_ALEXIS/Analyses_alexis/2023_analysed/"
-    config_path = os.path.expanduser("~/.predict_extract_config.json")
+    config_path = os.path.expanduser("/users/zfne/mustun/Documents/GitHub/DolphinWhistleExtractor/predict_extract_config.json")
     
     # Load saved configuration
     config = load_config(config_path)
@@ -105,7 +106,6 @@ def main():
     default_max_workers = 8
     default_CLF = 3  # Cut low frequency
     default_CHF = 20  # Cut high frequency
-    default_threshold = 0.5  # Binary classification threshold
 
     # Set up command-line arguments
     parser = argparse.ArgumentParser(
@@ -138,10 +138,6 @@ def main():
                         help='Cut low frequency (kHz)')
     parser.add_argument('--CHF', type=int, default=default_CHF, 
                         help='Cut high frequency (kHz)')
-    
-    # Detection threshold parameter
-    parser.add_argument('--threshold', type=float, default=default_threshold, 
-                        help='Binary classification threshold for whistle detection (0.0-1.0)')
     
     # File selection parameter
     parser.add_argument('--specific_files', 
@@ -204,7 +200,6 @@ def main():
             save=args.save,
             save_positives=args.save_p,
             model_path=args.model_path,
-            binary_threshold=args.threshold,
             max_workers=args.max_workers,
             specific_files=specific_files
         )
@@ -216,3 +211,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

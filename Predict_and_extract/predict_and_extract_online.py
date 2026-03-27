@@ -12,6 +12,9 @@ from typing import List, Tuple, Optional, Dict, Any, Union
 from dataclasses import dataclass
 import time
 
+# Use CPU for testing
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
 # TensorFlow optimizations
 import tensorflow as tf
 physical_devices = tf.config.list_physical_devices('GPU')
