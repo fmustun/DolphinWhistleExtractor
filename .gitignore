@@ -37,3 +37,9 @@ DNN_yolo_dolphin_image_recognition/yolov5/
 processed
 processed_cat
 processed*
+
+.vscode
+.codex
+
+cnn_dataset/
+wandb/

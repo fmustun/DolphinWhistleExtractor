@@ -5,7 +5,7 @@ Dolphin Whistle Detection and Extraction Tool  (new model edition)
 Uses the retrained VGG16-based model and updated spectrogram parameters
 that match batch_plot_0p4s_spectrograms.py:
     wlen=1024, nfft=1024, hop=512, CLF=2 kHz, CHF=22 kHz,
-    0.4 s sliding window, VGG16 preprocess_input.
+    0.4 s sliding window, backend-specific model normalization.
 
 Examples
 --------
@@ -65,7 +65,7 @@ def main():
     config = load_config(config_path)
 
     # ── Defaults ──────────────────────────────────────────────────────────────
-    default_model_path    = "models/model_vgg_best.h5"
+    default_model_path    = "models/run3/model_vgg_best.pt"
     default_recordings    = config.get("recordings", "")
     default_saving_folder = config.get("saving_folder", "")
     default_batch_size    = 64
@@ -82,7 +82,7 @@ def main():
 
     # Paths
     parser.add_argument('--model_path', default=default_model_path,
-                        help='Path to the trained Keras model (.h5 or .keras)')
+                        help='Path to the trained model (.pt, .h5 or .keras)')
     parser.add_argument('--recordings', default=default_recordings,
                         help='Folder containing WAV/FLAC recordings')
     parser.add_argument('--saving_folder', default=default_saving_folder,
@@ -188,6 +188,7 @@ def main():
             max_workers=args.max_workers,
             specific_files=specific_files,
             target_fs=args.target_fs if args.target_fs > 0 else None,
+            cpu_only=args.cpu,
         )
         print("Processing completed successfully.")
     except Exception as e:

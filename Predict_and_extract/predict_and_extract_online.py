@@ -9,7 +9,7 @@ Spectrogram parameters are identical to those used during training
     CLF = 2 kHz, CHF = 22 kHz
     0.4 s sliding window, scipy PSD mode, 10·log10, min-max [0-255],
     flipud → INTER_NEAREST resize to model input size,
-    VGG16 preprocess_input before inference.
+    backend-specific model normalization before inference.
 
 Set `target_fs` in ProcessingConfig (default 96 000 Hz) to match the sample
 rate used when creating the training spectrograms.  If recordings were captured
@@ -22,7 +22,7 @@ Key differences vs predict_and_extract_online.py
 * hop = round(0.5 * wlen)  (was round(0.8 * wlen))
 * wlen / nfft = 1024  (were 2048)
 * CLF = 2 kHz, CHF = 22 kHz  (were 3 / 20)
-* VGG16 preprocess_input is always applied  (was missing entirely)
+* backend-specific model normalization is always applied
 * Binary threshold applied consistently for all output shapes
 """
 
@@ -30,9 +30,11 @@ import io
 import logging
 import mmap
 import os
+import sys
 import time
 import warnings
 import concurrent.futures
+from functools import lru_cache
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -40,19 +42,24 @@ from typing import List, Optional, Tuple
 import cv2
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+import torch
 from scipy.io import wavfile
-from scipy.signal import spectrogram as scipy_spectrogram
-from scipy.signal.windows import blackman
-from tensorflow.keras.applications.vgg16 import preprocess_input as vgg16_preprocess
 from tqdm import tqdm
 
-# ── GPU memory growth ─────────────────────────────────────────────────────────
-for _dev in tf.config.list_physical_devices('GPU'):
-    try:
-        tf.config.experimental.set_memory_growth(_dev, True)
-    except Exception:
-        pass
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from shared.whistle_torch import (  # noqa: E402
+    ARCHITECTURE_LEGACY,
+    DEFAULT_NORMALIZATION_MEAN,
+    DEFAULT_NORMALIZATION_STD,
+    SpectrogramConfig,
+    build_torch_model,
+    make_spectrogram_batch as shared_make_spectrogram_batch,
+    normalize_uint8_batch_to_torch,
+    resample_audio_if_needed,
+)
 
 # ── Logging & warnings ────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -63,6 +70,26 @@ logger = logging.getLogger(__name__)
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+
+@lru_cache(maxsize=1)
+def get_tf_module():
+    try:
+        import tensorflow as tf  # type: ignore
+        from tensorflow.keras.applications.vgg16 import preprocess_input as vgg16_preprocess  # type: ignore
+    except ImportError as exc:
+        raise ImportError(
+            'TensorFlow is required only for .h5/.keras inference. '
+            'Install tensorflow or use a .pt model.'
+        ) from exc
+
+    for dev in tf.config.list_physical_devices('GPU'):
+        try:
+            tf.config.experimental.set_memory_growth(dev, True)
+        except Exception:
+            pass
+
+    return tf, vgg16_preprocess
 
 
 # ── Configuration dataclass ───────────────────────────────────────────────────
@@ -98,6 +125,19 @@ class ProcessingConfig:
         return self.batch_size * self.sliding_window
 
 
+@dataclass
+class InferenceModel:
+    backend: str
+    model: object
+    image_size: Tuple[int, int]
+    output_type: str
+    device: Optional[torch.device] = None
+    normalization_mean: Tuple[float, float, float] = DEFAULT_NORMALIZATION_MEAN
+    normalization_std: Tuple[float, float, float] = DEFAULT_NORMALIZATION_STD
+    architecture: str = ARCHITECTURE_LEGACY
+    spectrogram_config: Optional[dict] = None
+
+
 # ── Spectrogram generation ────────────────────────────────────────────────────
 def make_spectrogram_batch(
     audio: np.ndarray,
@@ -105,7 +145,7 @@ def make_spectrogram_batch(
     start_sample: int,
     n_windows: int,
     config: ProcessingConfig,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate spectrogram images for up to `n_windows` consecutive 0.4 s clips.
 
@@ -114,7 +154,7 @@ def make_spectrogram_batch(
       → scipy PSD spectrogram → 10·log10 → min-max [0-255]
       → freq crop → flipud
       → INTER_NEAREST resize to model input size
-      → stack RGB → vgg16_preprocess
+      → stack RGB → model-specific normalization
 
     Parameters
     ----------
@@ -127,77 +167,61 @@ def make_spectrogram_batch(
     Returns
     -------
     imgs_uint8   : (N, H, W, 3) uint8  — for optional disk saving
-    model_input  : (N, H, W, 3) float32 — VGG16-preprocessed, ready for inference
     start_sec    : (N,) float64 — window start time in seconds from file start
     """
-    hop = config.hop
-    win_func = blackman(config.wlen, sym=False)
-    spw = round(config.sliding_window * fs)   # samples per window
-    lo_hz = config.cut_low_frequency * 1000
-    hi_hz = config.cut_high_frequency * 1000
-    h, w = config.image_size
-
-    imgs_list: List[np.ndarray] = []
-    start_sec: List[float] = []
-    freq_idx: Optional[Tuple[int, int]] = None
-
-    for i in range(n_windows):
-        s0 = start_sample + i * spw
-        s1 = s0 + spw
-        if s1 > len(audio):
-            break
-
-        x_w = audio[s0:s1].astype(np.float32)
-        f, _, sxx = scipy_spectrogram(
-            x_w, fs,
-            nperseg=config.wlen,
-            noverlap=config.wlen - hop,
-            nfft=config.nfft,
-            window=win_func,
-            scaling='density',
-            mode='psd',
-        )
-
-        sxx = 10.0 * np.log10(np.abs(sxx) + 1e-19)
-        sxx = (sxx - sxx.min()) / (sxx.max() - sxx.min() + 1e-12) * 255.0
-
-        # Compute freq-crop indices once (f is identical for all windows)
-        if freq_idx is None:
-            freq_idx = (
-                int(np.searchsorted(f, lo_hz)),
-                int(np.searchsorted(f, hi_hz)),
-            )
-        lo_i, hi_i = freq_idx
-
-        sxx_crop = np.flipud(sxx[lo_i:hi_i, :])
-        gray = np.clip(sxx_crop, 0, 255).astype(np.uint8)
-
-        # Resize to model input size with NEAREST interpolation.
-        # NEAREST matches PIL.Image.NEAREST used by Keras ImageDataGenerator
-        # and avoids sample-rate-dependent artefacts from two-step resizing.
-        resized = cv2.resize(gray, (w, h), interpolation=cv2.INTER_NEAREST)
-        rgb = np.stack([resized, resized, resized], axis=2)  # (H, W, 3) uint8
-
-        imgs_list.append(rgb)
-        start_sec.append(s0 / fs)
-
-    if not imgs_list:
-        empty_u8 = np.empty((0, h, w, 3), dtype=np.uint8)
-        return empty_u8, empty_u8.astype(np.float32), np.array([], dtype=np.float64)
-
-    imgs_uint8 = np.array(imgs_list, dtype=np.uint8)                    # (N, H, W, 3)
-    model_input = vgg16_preprocess(imgs_uint8.astype(np.float32))       # BGR mean sub
-
-    return imgs_uint8, model_input, np.array(start_sec, dtype=np.float64)
+    spectrogram_config = SpectrogramConfig(
+        image_size=config.image_size,
+        cut_low_frequency=config.cut_low_frequency,
+        cut_high_frequency=config.cut_high_frequency,
+        wlen=config.wlen,
+        nfft=config.nfft,
+        sliding_window=config.sliding_window,
+        target_fs=config.target_fs,
+    )
+    return shared_make_spectrogram_batch(
+        audio,
+        fs,
+        start_sample,
+        n_windows,
+        spectrogram_config,
+    )
 
 
-# ── TF inference helpers ──────────────────────────────────────────────────────
-@tf.function(reduce_retracing=True)
-def predict_batch(model: tf.keras.Model, images: tf.Tensor) -> tf.Tensor:
-    return model(images, training=False)
+def prepare_inputs_for_backend(
+    images_uint8: np.ndarray,
+    inference_model: InferenceModel,
+) -> object:
+    if inference_model.backend == 'tensorflow':
+        tf, vgg16_preprocess = get_tf_module()
+        model_input = vgg16_preprocess(images_uint8.astype(np.float32))
+        return tf.convert_to_tensor(model_input, dtype=tf.float32)
+
+    return normalize_uint8_batch_to_torch(
+        images_uint8,
+        mean=inference_model.normalization_mean,
+        std=inference_model.normalization_std,
+        device=inference_model.device,
+    )
 
 
-def detect_model_output_type(model: tf.keras.Model) -> str:
+def predict_batch_tf(model: object, images: object) -> np.ndarray:
+    return model(images, training=False).numpy()
+
+
+def predict_batch(
+    inference_model: InferenceModel,
+    images_uint8: np.ndarray,
+) -> np.ndarray:
+    model_input = prepare_inputs_for_backend(images_uint8, inference_model)
+    if inference_model.backend == 'tensorflow':
+        return predict_batch_tf(inference_model.model, model_input)
+
+    with torch.no_grad():
+        logits = inference_model.model(model_input)
+        return torch.softmax(logits, dim=1).cpu().numpy()
+
+
+def detect_model_output_type(model: object) -> str:
     dummy = np.zeros((1,) + tuple(model.input_shape[1:]), dtype=np.float32)
     out = model.predict(dummy, verbose=0)
     if out.ndim == 1 or (out.ndim == 2 and out.shape[1] == 1):
@@ -205,6 +229,68 @@ def detect_model_output_type(model: tf.keras.Model) -> str:
     if out.ndim == 2 and out.shape[1] >= 2:
         return 'categorical'
     return 'unknown'
+
+
+def get_torch_device(cpu_only: bool) -> torch.device:
+    if cpu_only or os.environ.get('CUDA_VISIBLE_DEVICES') == '-1' or not torch.cuda.is_available():
+        return torch.device('cpu')
+    return torch.device('cuda')
+
+
+def load_inference_model(model_path: str, cpu_only: bool = False) -> InferenceModel:
+    logger.info(f"Loading model from {model_path}")
+    suffix = Path(model_path).suffix.lower()
+
+    if suffix in ('.h5', '.keras'):
+        tf, _ = get_tf_module()
+        model = tf.keras.models.load_model(model_path, compile=False)
+        model.trainable = False
+        model_type = detect_model_output_type(model)
+        logger.info(f"Model type: {model_type}  |  Input: {model.input_shape}")
+        _ = model.predict(
+            np.zeros((1,) + tuple(model.input_shape[1:]), dtype=np.float32),
+            verbose=0,
+        )
+        return InferenceModel(
+            backend='tensorflow',
+            model=model,
+            image_size=(int(model.input_shape[1]), int(model.input_shape[2])),
+            output_type=model_type,
+        )
+
+    if suffix == '.pt':
+        device = get_torch_device(cpu_only)
+        checkpoint = torch.load(model_path, map_location=device)
+        architecture = checkpoint.get('architecture', ARCHITECTURE_LEGACY)
+        model = build_torch_model(
+            architecture=architecture,
+            pretrained_backbone=False,
+        ).to(device)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
+        img_size = int(checkpoint.get('img_size', 224))
+        normalization = checkpoint.get('normalization', {})
+        mean = tuple(normalization.get('mean', DEFAULT_NORMALIZATION_MEAN))
+        std = tuple(normalization.get('std', DEFAULT_NORMALIZATION_STD))
+        spectrogram_config = checkpoint.get('spectrogram_config')
+        with torch.no_grad():
+            dummy = torch.zeros((1, 3, img_size, img_size), device=device, dtype=torch.float32)
+            _ = model(dummy)
+        logger.info(f"Model type: categorical  |  Input: (None, {img_size}, {img_size}, 3)")
+        logger.info(f"PyTorch inference device: {device}")
+        return InferenceModel(
+            backend='torch',
+            model=model,
+            image_size=(img_size, img_size),
+            output_type='categorical',
+            device=device,
+            normalization_mean=mean,
+            normalization_std=std,
+            architecture=architecture,
+            spectrogram_config=spectrogram_config,
+        )
+
+    raise ValueError(f"Unsupported model format: {suffix}. Expected .pt, .h5 or .keras")
 
 
 def get_positive_scores(
@@ -283,7 +369,7 @@ def process_and_predict(
     config: ProcessingConfig,
     start_time: float,
     end_time: Optional[float],
-    model: tf.keras.Model,
+    model: InferenceModel,
     saving_folder: Path,
 ) -> Tuple[List[str], List[float], List[float], List[float]]:
     """
@@ -301,17 +387,10 @@ def process_and_predict(
         fs, x = load_audio(file_path)
 
         # Resample to the target sample rate used during training
-        if config.target_fs is not None and fs != config.target_fs:
-            try:
-                import librosa
-                logger.info(f"{file_name}: resampling {fs} Hz → {config.target_fs} Hz")
-                x = librosa.resample(x, orig_sr=fs, target_sr=config.target_fs)
-                fs = config.target_fs
-            except ImportError:
-                logger.warning(
-                    "librosa not installed — cannot resample.  "
-                    "Install it with: pip install librosa"
-                )
+        original_fs = fs
+        fs, x = resample_audio_if_needed(x, fs, config.target_fs)
+        if fs != original_fs:
+            logger.info(f"{file_name}: resampling {original_fs} Hz → {fs} Hz")
 
         logger.info(
             f"{file_name}: fs={fs} Hz, "
@@ -330,16 +409,14 @@ def process_and_predict(
 
         for b in tqdm(range(num_batches), desc=file_name, leave=False, colour='blue'):
             batch_start = start_sample + b * config.batch_size * spw
-            imgs_uint8, model_input, win_starts = make_spectrogram_batch(
+            imgs_uint8, win_starts = make_spectrogram_batch(
                 x, fs, batch_start, config.batch_size, config,
             )
 
             if imgs_uint8.shape[0] == 0:
                 continue
 
-            preds = predict_batch(
-                model, tf.convert_to_tensor(model_input, dtype=tf.float32),
-            ).numpy()
+            preds = predict_batch(model, imgs_uint8)
 
             pos_idx, all_scores = get_positive_scores(preds, config.binary_threshold)
 
@@ -354,7 +431,7 @@ def process_and_predict(
                 if config.save_positive_examples:
                     save_detection_image(imgs_uint8[idx], t_s, t_e, saving_folder)
 
-            del imgs_uint8, model_input, preds
+            del imgs_uint8, preds
 
         logger.info(
             f"{file_name}: {len(record_names)} detections in {time.time()-t0:.1f}s"
@@ -373,7 +450,7 @@ def process_single_file(
     config: ProcessingConfig,
     start_time: float,
     end_time: Optional[float],
-    model: tf.keras.Model,
+    model: InferenceModel,
     pbar: tqdm,
 ) -> None:
     """Wrapper that handles one WAV/FLAC file and writes the predictions CSV."""
@@ -390,9 +467,9 @@ def process_single_file(
             logger.info(f"Skipping {file_name}: already processed")
             return
 
-        file_saving_folder.mkdir(exist_ok=True, parents=True)
         logger.info(f"Processing: {file_stem}")
 
+        file_saving_folder.mkdir(exist_ok=True, parents=True)
         record_names, starts, ends, scores = process_and_predict(
             str(file_path), config, start_time, end_time, model, file_saving_folder,
         )
@@ -413,7 +490,7 @@ def get_optimal_batch_size(file_count: int) -> int:
         mem_gb = psutil.virtual_memory().available / 1024 ** 3
     except ImportError:
         mem_gb = 8
-    gpu_ok = bool(tf.config.list_physical_devices('GPU'))
+    gpu_ok = bool(torch.cuda.is_available())
     if gpu_ok:
         return 64 if mem_gb > 16 else (32 if mem_gb > 8 else 16)
     return 128 if mem_gb > 32 else (64 if mem_gb > 16 else (32 if mem_gb > 8 else 16))
@@ -450,6 +527,7 @@ def process_predict_extract(
     max_workers: Optional[int] = None,
     specific_files: Optional[List[str]] = None,
     target_fs: Optional[int] = 96_000,
+    cpu_only: bool = False,
 ) -> None:
     """
     Load model, iterate over recordings, run whistle detection, write CSV results.
@@ -464,7 +542,7 @@ def process_predict_extract(
     end_time              : stop processing at this second (None = full file)
     batch_size            : number of 0.4 s windows per inference batch
     save_positives        : if True, save spectrogram images for positive detections
-    model_path            : path to the saved Keras model (.h5 or .keras)
+    model_path            : path to the saved model (.pt, .h5 or .keras)
     binary_threshold      : detection threshold applied to class-1 probability
     max_workers           : thread-pool size (None = auto)
     specific_files        : list of filenames (relative to recording_folder_path)
@@ -484,11 +562,9 @@ def process_predict_extract(
             and Path(f).suffix.lower() in audio_exts
         ])
     else:
-        already_done = {p.parent.name for p in out_folder.rglob('*.wav_predictions.csv')}
         files = sorted([
             f for f in os.listdir(recording_folder_path)
             if Path(f).suffix.lower() in audio_exts
-            and Path(f).stem not in already_done
         ])
 
     if not files:
@@ -505,22 +581,13 @@ def process_predict_extract(
         logger.info(f"Auto worker count: {max_workers}")
 
     # ── Load model ────────────────────────────────────────────────────────────
-    logger.info(f"Loading model from {model_path}")
     try:
-        model = tf.keras.models.load_model(model_path, compile=False)
-        model.trainable = False
-        model_type = detect_model_output_type(model)
-        logger.info(f"Model type: {model_type}  |  Input: {model.input_shape}")
-        # Warm-up run to trigger XLA/TF graph compilation
-        _ = model.predict(
-            np.zeros((1,) + tuple(model.input_shape[1:]), dtype=np.float32),
-            verbose=0,
-        )
+        model = load_inference_model(model_path, cpu_only=cpu_only)
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
         return
 
-    img_h, img_w = int(model.input_shape[1]), int(model.input_shape[2])
+    img_h, img_w = model.image_size
 
     config = ProcessingConfig(
         batch_size=batch_size,
@@ -531,6 +598,30 @@ def process_predict_extract(
         image_size=(img_h, img_w),
         target_fs=target_fs,
     )
+
+    checkpoint_spectrogram_config = SpectrogramConfig.from_metadata(model.spectrogram_config)
+    mismatches = []
+    requested = {
+        'image_size': tuple(config.image_size),
+        'cut_low_frequency': float(config.cut_low_frequency),
+        'cut_high_frequency': float(config.cut_high_frequency),
+        'wlen': int(config.wlen),
+        'nfft': int(config.nfft),
+        'sliding_window': float(config.sliding_window),
+        'target_fs': config.target_fs,
+    }
+    trained = checkpoint_spectrogram_config.to_metadata()
+    for key, requested_value in requested.items():
+        trained_value = trained.get(key)
+        if key == 'image_size':
+            trained_value = tuple(trained_value) if trained_value is not None else None
+        if trained_value != requested_value:
+            mismatches.append(f'{key}: train={trained_value} inference={requested_value}')
+    if mismatches:
+        logger.warning(
+            'Inference settings differ from the Torch training checkpoint: '
+            + '; '.join(mismatches)
+        )
 
     # ── Process files in parallel ─────────────────────────────────────────────
     with tqdm(total=len(files), desc="Files", position=0, leave=True) as pbar:
