@@ -43,3 +43,7 @@ processed*
 
 cnn_dataset/
 wandb/
+slurm_logs/
+slurm/
+test/inference_2022_run3/
+test/inference_2022_run3_jz/

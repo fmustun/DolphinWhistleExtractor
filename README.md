@@ -161,6 +161,32 @@ The system uses a three-stage pipeline:
 - [Kaggle](https://www.kaggle.com/code/alexisemanuelli/whistles-detection-transfer-learning-0-95)
 - [Model Fine-tuning Guide](https://www.kaggle.com/alexisemanuelli/fine-tune)
 
+## Jean Zay Inference
+
+For large-scale inference on Jean Zay, prepare file-list chunks and run a Slurm array:
+
+```bash
+python scripts/prepare_jeanzay_inference_chunks.py \
+  --recordings-dir /store/rech/ioc/commun/dolphin_audio/2022 \
+  --output-dir slurm/chunks_2022 \
+  --chunk-size 100
+```
+
+Then submit the array:
+
+```bash
+sbatch --array=0-63 scripts/run_jeanzay_inference_array.sbatch
+```
+
+Override defaults at submission time when needed:
+
+```bash
+sbatch \
+  --array=0-63 \
+  --export=ALL,RECORDINGS_DIR=/store/rech/ioc/commun/dolphin_audio/2022,OUTPUT_DIR=/lustre/fswork/projects/rech/ioc/commun/DolphinWhistleExtractor/test/inference_2022_run3_jz,MODEL_PATH=/lustre/fswork/projects/rech/ioc/commun/DolphinWhistleExtractor/models/run3/model_vgg_best.pt,MAX_WORKERS=6,BATCH_SIZE=16,THRESHOLD=0.5 \
+  scripts/run_jeanzay_inference_array.sbatch
+```
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
