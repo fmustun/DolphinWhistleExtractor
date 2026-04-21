@@ -1,49 +1,57 @@
 Corbeille
-DNN_whistle_detection/models/model_vgg.h5
-Image_detection/yolov5/
-DNN_whistle_detection/recordings/Exp_01_Feb_2024_1145_channel_0.wav
 Eval model /
 Eval modelExp_01_Jul_2022_1145_channel_1
-extraits
-
-*.h5
-extrait_1637_1649.mp4
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-*.pyc
-=======
->>>>>>> Stashed changes
-DNN_whistle_detection/__pycache__/predict_online_parallel.cpython-39.pyc
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-DNN_whistle_detection/fichiers_corrompus.txt
-/home/alexis/Documents/GitHub/Dolphins/DNN_whistle_detection/.gitignore
-DNN_whistle_detection/__pycache__/whistle2vid.cpython-39.pyc
-/home/alexis/Documents/GitHub/Dolphins/DNN_whistle_detection/__pycache__/whistle2vid.cpython-39.pyc
-*.mp4
-DNN_whistle_detection/main.py
-DNN_whistle_detection/main.py
 Video_against_spectro.tar.gz
-DNN_yolo_dolphin_recognition/yolov5/
-*.jpg
-*.jpg
-/home/alexis/Documents/GitHub/Dolphins/Dolphins_env
-Dolphins_env
-DNN_whistle_detection/Train_model/whistles_from_csv
-DNN_yolo_dolphin_image_recognition/yolov5/
+extraits
 processed
 processed_cat
 processed*
+location.txt
 
-.vscode
+# Local IDE / agent state
+.vscode/
 .codex
+.codex/
 
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Large model artifacts
+*.h5
+*.keras
+*.pt
+
+# Media and archives
+*.mp4
+*.jpg
+*.jpeg
+*.tar
+*.tar.gz
+
+# Large generated datasets and experiment outputs
 cnn_dataset/
 wandb/
 slurm_logs/
 slurm/
+models/run3/
+models/run_vgg_final/
+saved_runs/**/model/
+openwhistle_detection_finetuning/output/
+reports/**/_cache/
 test/inference_2022_run3/
 test/inference_2022_run3_jz/
+
+# External benchmark raw data and generated inference
+benchmark_data/**/flat_recordings/
+benchmark_data/**/inference*/
+benchmark_data/adriatic_source/
+benchmark_data/dclde_source/
+benchmark_data/dclde_smoke_source/
+
+# Legacy / external local paths
+Image_detection/yolov5/
+DNN_yolo_dolphin_recognition/yolov5/
+DNN_yolo_dolphin_image_recognition/yolov5/
+Dolphins_env
+/home/alexis/Documents/GitHub/Dolphins/Dolphins_env
