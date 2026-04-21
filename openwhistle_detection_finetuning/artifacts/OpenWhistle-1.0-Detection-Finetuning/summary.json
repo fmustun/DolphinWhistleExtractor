@@ -1,0 +1,203 @@
+{
+  "binary_counts_by_split": {
+    "test": {
+      "noise": 803,
+      "whistle": 582
+    },
+    "train": {
+      "noise": 2109,
+      "whistle": 3418
+    }
+  },
+  "binary_counts_total": {
+    "noise": 2912,
+    "whistle": 4000
+  },
+  "binary_label_names": [
+    "noise",
+    "whistle"
+  ],
+  "features": [
+    {
+      "dtype": "audio(decode=false)",
+      "name": "audio"
+    },
+    {
+      "dtype": "class_label(noise, whistle)",
+      "name": "label"
+    },
+    {
+      "dtype": "string",
+      "name": "name"
+    },
+    {
+      "dtype": "string",
+      "name": "source_label"
+    }
+  ],
+  "limit_per_split": null,
+  "repo_id": "dolphinteam/OpenWhistle-1.0-Detection-Finetuning",
+  "rows_by_split": {
+    "test": 1385,
+    "train": 5527
+  },
+  "rows_total": 6912,
+  "source_group_counts_by_split": {
+    "test": {
+      "identity::Dana": 130,
+      "identity::Yosefa": 452,
+      "noise_family::new_noise_chunk": 803
+    },
+    "train": {
+      "identity::Luna": 1456,
+      "identity::Nana": 145,
+      "identity::Neo": 1444,
+      "identity::Nikita": 329,
+      "identity::Shy": 44,
+      "noise_family::noise_chunk": 2109
+    }
+  },
+  "source_group_summary": [
+    {
+      "binary_counts": {
+        "whistle": 130
+      },
+      "contains_noise": 0,
+      "contains_whistle": 1,
+      "rows": 130,
+      "source_group": "identity::Dana",
+      "source_label_counts": {
+        "Dana": 130
+      }
+    },
+    {
+      "binary_counts": {
+        "whistle": 1456
+      },
+      "contains_noise": 0,
+      "contains_whistle": 1,
+      "rows": 1456,
+      "source_group": "identity::Luna",
+      "source_label_counts": {
+        "Luna": 1456
+      }
+    },
+    {
+      "binary_counts": {
+        "whistle": 145
+      },
+      "contains_noise": 0,
+      "contains_whistle": 1,
+      "rows": 145,
+      "source_group": "identity::Nana",
+      "source_label_counts": {
+        "Nana": 145
+      }
+    },
+    {
+      "binary_counts": {
+        "whistle": 1444
+      },
+      "contains_noise": 0,
+      "contains_whistle": 1,
+      "rows": 1444,
+      "source_group": "identity::Neo",
+      "source_label_counts": {
+        "Neo": 1444
+      }
+    },
+    {
+      "binary_counts": {
+        "whistle": 329
+      },
+      "contains_noise": 0,
+      "contains_whistle": 1,
+      "rows": 329,
+      "source_group": "identity::Nikita",
+      "source_label_counts": {
+        "Nikita": 329
+      }
+    },
+    {
+      "binary_counts": {
+        "whistle": 44
+      },
+      "contains_noise": 0,
+      "contains_whistle": 1,
+      "rows": 44,
+      "source_group": "identity::Shy",
+      "source_label_counts": {
+        "Shy": 44
+      }
+    },
+    {
+      "binary_counts": {
+        "whistle": 452
+      },
+      "contains_noise": 0,
+      "contains_whistle": 1,
+      "rows": 452,
+      "source_group": "identity::Yosefa",
+      "source_label_counts": {
+        "Yosefa": 452
+      }
+    },
+    {
+      "binary_counts": {
+        "noise": 803
+      },
+      "contains_noise": 1,
+      "contains_whistle": 0,
+      "rows": 803,
+      "source_group": "noise_family::new_noise_chunk",
+      "source_label_counts": {
+        "noise": 803
+      }
+    },
+    {
+      "binary_counts": {
+        "noise": 2109
+      },
+      "contains_noise": 1,
+      "contains_whistle": 0,
+      "rows": 2109,
+      "source_group": "noise_family::noise_chunk",
+      "source_label_counts": {
+        "noise": 2109
+      }
+    }
+  ],
+  "source_label_counts_by_split": {
+    "test": {
+      "Dana": 130,
+      "Yosefa": 452,
+      "noise": 803
+    },
+    "train": {
+      "Luna": 1456,
+      "Nana": 145,
+      "Neo": 1444,
+      "Nikita": 329,
+      "Shy": 44,
+      "noise": 2109
+    }
+  },
+  "source_label_counts_total": {
+    "Dana": 130,
+    "Luna": 1456,
+    "Nana": 145,
+    "Neo": 1444,
+    "Nikita": 329,
+    "Shy": 44,
+    "Yosefa": 452,
+    "noise": 2912
+  },
+  "source_repo_id": "dolphinteam/DophinWhistle-Detection-Finetuning_OLD",
+  "source_rows_total": 6912,
+  "source_snapshot_dir": "/home/pablo/.cache/huggingface/hub/datasets--dolphinteam--DophinWhistle-Detection-Finetuning-old/snapshots/900c23544f90b87c46f212dae6908e47fe735053",
+  "split_policy": {
+    "seed": 42,
+    "strategy": "grouped_by_source_provenance",
+    "test_size": 0.2
+  }
+}
