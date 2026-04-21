@@ -34,6 +34,8 @@ cnn_dataset/
 wandb/
 slurm_logs/
 slurm/
+benchmark_data/
+saved_runs/
 models/run3/
 models/run_vgg_final/
 saved_runs/**/model/
