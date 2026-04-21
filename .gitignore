@@ -41,6 +41,19 @@ openwhistle_detection_finetuning/output/
 reports/**/_cache/
 test/inference_2022_run3/
 test/inference_2022_run3_jz/
+test/inference_2022_run3_review/
+test/inference_2022_run3_summary/
+
+# Generated review reports
+reports/classification_f0_review_default/
+reports/classification_f0_review_exact_legacy/
+reports/classification_f0_review_exact_legacy_v2/
+reports/classification_f0_review_exact_legacy_ylim22/
+reports/classification_f0_review_legacy/
+reports/classification_f0_review_legacy_check/
+reports/classification_f0_review_legacy_ylim22/
+reports/pretraining_2024_aug_dec_raw_review/_cache/
+reports/pretraining_2024_aug_dec_raw_review/review_sheets/
 
 # External benchmark raw data and generated inference
 benchmark_data/**/flat_recordings/

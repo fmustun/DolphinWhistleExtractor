@@ -1,0 +1,144 @@
+{
+  "best_month_hydrophone_by_rate": {
+    "detections_per_hour": 1973.4949621599956,
+    "hydrophone": "0",
+    "matched_recording_files": 326,
+    "mean_detection_confidence": 0.6882362961769104,
+    "mean_file_confidence": 0.6712814569473267,
+    "median_detection_confidence": 0.673386812210083,
+    "median_file_confidence": 0.6739833950996399,
+    "month": "2024-09",
+    "recording_files": 326,
+    "total_detections": 533398,
+    "total_duration_hours": 270.2809027777778,
+    "total_duration_seconds": 973011.25
+  },
+  "dataset_repo": "dolphinteam/DolphinWhistle-Pretraining-2024-aug-dec-raw",
+  "focus_month_summary": [
+    {
+      "detections_per_hour": 1973.4949621599956,
+      "hydrophone": "0",
+      "matched_recording_files": 326,
+      "mean_detection_confidence": 0.6882362961769104,
+      "mean_file_confidence": 0.6712814569473267,
+      "median_detection_confidence": 0.673386812210083,
+      "median_file_confidence": 0.6739833950996399,
+      "month": "2024-09",
+      "recording_files": 326,
+      "total_detections": 533398,
+      "total_duration_hours": 270.2809027777778,
+      "total_duration_seconds": 973011.25
+    },
+    {
+      "detections_per_hour": 1600.3288708809243,
+      "hydrophone": "1",
+      "matched_recording_files": 326,
+      "mean_detection_confidence": 0.7104054689407349,
+      "mean_file_confidence": 0.7367432713508606,
+      "median_detection_confidence": 0.6919541954994202,
+      "median_file_confidence": 0.7160837650299072,
+      "month": "2024-09",
+      "recording_files": 326,
+      "total_detections": 432545,
+      "total_duration_hours": 270.28506944444445,
+      "total_duration_seconds": 973026.25
+    },
+    {
+      "detections_per_hour": 1517.5245605015607,
+      "hydrophone": "2",
+      "matched_recording_files": 278,
+      "mean_detection_confidence": 0.6993672847747803,
+      "mean_file_confidence": 0.7056212425231934,
+      "median_detection_confidence": 0.6907327175140381,
+      "median_file_confidence": 0.6951442956924438,
+      "month": "2024-09",
+      "recording_files": 278,
+      "total_detections": 349371,
+      "total_duration_hours": 230.22428044560183,
+      "total_duration_seconds": 828807.4096041666
+    },
+    {
+      "detections_per_hour": 259.7007967269703,
+      "hydrophone": "0",
+      "matched_recording_files": 336,
+      "mean_detection_confidence": 0.6877941489219666,
+      "mean_file_confidence": 0.6865447163581848,
+      "median_detection_confidence": 0.6519433259963989,
+      "median_file_confidence": 0.6831485629081726,
+      "month": "2024-10",
+      "recording_files": 336,
+      "total_detections": 72647,
+      "total_duration_hours": 279.73345063078705,
+      "total_duration_seconds": 1007040.4222708333
+    },
+    {
+      "detections_per_hour": 423.8710568140313,
+      "hydrophone": "1",
+      "matched_recording_files": 340,
+      "mean_detection_confidence": 0.8414175510406494,
+      "mean_file_confidence": 0.7913285493850708,
+      "median_detection_confidence": 0.8886858224868774,
+      "median_file_confidence": 0.8178527355194092,
+      "month": "2024-10",
+      "recording_files": 340,
+      "total_detections": 119986,
+      "total_duration_hours": 283.07193442708336,
+      "total_duration_seconds": 1019058.9639375
+    },
+    {
+      "detections_per_hour": 97.16125966411546,
+      "hydrophone": "2",
+      "matched_recording_files": 202,
+      "mean_detection_confidence": 0.767302930355072,
+      "mean_file_confidence": 0.728865385055542,
+      "median_detection_confidence": 0.7552616596221924,
+      "median_file_confidence": 0.7397799491882324,
+      "month": "2024-10",
+      "recording_files": 202,
+      "total_detections": 16364,
+      "total_duration_hours": 168.4210358796296,
+      "total_duration_seconds": 606315.7291666666
+    }
+  ],
+  "focus_months": [
+    "2024-09",
+    "2024-10"
+  ],
+  "hydrophone_summary": [
+    {
+      "detections_per_hour": 685.8739258614419,
+      "first_recording_datetime": "2024-07-26T16:00:00",
+      "hydrophone": "0",
+      "months_present": 6,
+      "total_detections": 723730,
+      "total_duration_hours": 1055.193925167824,
+      "total_duration_seconds": 3798698.1306041665
+    },
+    {
+      "detections_per_hour": 577.1351637300565,
+      "first_recording_datetime": "2024-07-25T12:00:00",
+      "hydrophone": "1",
+      "months_present": 6,
+      "total_detections": 749057,
+      "total_duration_hours": 1297.8883406770835,
+      "total_duration_seconds": 4672398.0264375005
+    },
+    {
+      "detections_per_hour": 427.00328512891207,
+      "first_recording_datetime": "2024-07-26T14:00:00",
+      "hydrophone": "2",
+      "months_present": 6,
+      "total_detections": 425418,
+      "total_duration_hours": 996.2874170196759,
+      "total_duration_seconds": 3586634.701270833
+    }
+  ],
+  "matched_recording_files": 4027,
+  "missing_recording_files": 0,
+  "overall_detections_per_hour": 566.7349918736173,
+  "parquet_url": "https://huggingface.co/datasets/dolphinteam/DolphinWhistle-Pretraining-2024-aug-dec-raw/resolve/refs%2Fconvert%2Fparquet/default/train/0000.parquet",
+  "total_detections": 1898205,
+  "total_duration_hours": 3349.3696828645834,
+  "total_duration_seconds": 12057730.8583125,
+  "unique_recordings": 4027
+}
